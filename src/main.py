@@ -1,7 +1,7 @@
 from __future__ import print_function
 
-from keras.models import Model
-from keras.layers import Input, LSTM, Dense
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import Input, LSTM, Dense
 import numpy as np
 
 batch_size = 64  # Batch size for training.
@@ -113,4 +113,3 @@ model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
           validation_split=0.2)
 # Save model
 model.save('s2s.h5')
-fra.txt
