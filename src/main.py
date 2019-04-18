@@ -113,3 +113,4 @@ model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
           validation_split=0.2)
 # Save model
 model.save('s2s.h5')
+fra.txt
