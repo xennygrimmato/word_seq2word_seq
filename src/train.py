@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import json
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Input, LSTM, Dense
 import numpy as np
@@ -62,6 +63,8 @@ input_token_index = dict(
 target_token_index = dict(
     [(word, i) for i, word in enumerate(target_words)])
 
+
+# Prepare data to be ingested by the model
 encoder_input_data = np.zeros(
     (len(input_texts), max_encoder_seq_length, num_encoder_tokens),
     dtype='float32')
@@ -113,3 +116,10 @@ model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
           validation_split=0.2)
 # Save model
 model.save('s2s.h5')
+
+metadata = {
+    'num_encoder_tokens': num_encoder_tokens,
+    'num_decoder_tokens': num_decoder_tokens
+}
+
+json.dump(metadata, open('metadata.json', 'w'))
