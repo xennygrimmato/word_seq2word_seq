@@ -22,7 +22,8 @@ class Seq2Seq:
                 num_encoder_tokens+1,
                 num_encoder_tokens,
                 weights=[np.concatenate((np.zeros(shape=(1, num_encoder_tokens)), np.identity(num_encoder_tokens)))],
-                trainable=False
+                trainable=False,
+                mask_zero=True
             )
         elif projection == 'word2vec':
             embedding = Embedding(
@@ -45,7 +46,8 @@ class Seq2Seq:
                 num_decoder_tokens+1,
                 num_decoder_tokens,
                 weights=[np.concatenate((np.zeros(shape=(1, num_decoder_tokens)), np.identity(num_decoder_tokens)))],
-                trainable=False
+                trainable=False,
+                mask_zero=True
             )
         elif projection == 'word2vec':
             embedding = Embedding(
