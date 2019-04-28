@@ -51,13 +51,19 @@ class Seq2SeqModel:
             [decoder_inputs] + decoder_states_inputs,
             [decoder_outputs] + decoder_states)
 
+    def pre_process_encoder_input(self, input):
+        return one_hot_encode(input, self.max_encoder_seq_length, self.num_encoder_tokens)
+
+    def pre_process_decoder_input(self, input):
+        return one_hot_encode(input, self.max_decoder_seq_length, self.num_decoder_tokens)
+
     def train(self, encoder_input_seqs, decoder_input_seqs, decoder_target_seqs, batch_size=64, epochs=100):
         # Run training
         self.max_encoder_seq_length = max([len(seq) for seq in encoder_input_seqs])
         self.max_decoder_seq_length = max([len(seq) for seq in decoder_input_seqs])
-        encoder_input_data = one_hot_encode(encoder_input_seqs, self.max_encoder_seq_length, self.num_encoder_tokens)
-        decoder_input_data = one_hot_encode(decoder_input_seqs, self.max_decoder_seq_length, self.num_decoder_tokens)
-        decoder_target_data = one_hot_encode(decoder_target_seqs, self.max_decoder_seq_length, self.num_decoder_tokens)
+        encoder_input_data = self.pre_process_encoder_input(encoder_input_seqs)
+        decoder_input_data = self.pre_process_decoder_input(decoder_input_seqs)
+        decoder_target_data = self.pre_process_decoder_input(decoder_target_seqs)
         self.train_model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
         self.train_model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
                   batch_size=batch_size,
@@ -69,7 +75,8 @@ class Seq2SeqModel:
         self.decoder_model.save('decoder_model.s2s.h5')
 
     def encode(self, input_seq):
-        encoder_input_data = one_hot_encode(input_seq, self.max_encoder_seq_length, self.num_encoder_tokens)
+        # encoder_input_data = one_hot_encode(input_seq, self.max_encoder_seq_length, self.num_encoder_tokens)
+        encoder_input_data = self.pre_process_encoder_input(input_seq)
         return self.encoder_model.predict(encoder_input_data)
 
     def decode(self, states_value):
