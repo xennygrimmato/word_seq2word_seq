@@ -1,7 +1,7 @@
 from __future__ import print_function
 
-from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Input, LSTM, Dense
+from keras.models import Model
+from keras.layers import Input, LSTM, Dense
 import numpy as np
 
 from src.utils import one_hot_encode
