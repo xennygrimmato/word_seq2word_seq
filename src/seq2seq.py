@@ -8,7 +8,7 @@ from src.utils import one_hot_encode, add_one
 
 
 class Seq2Seq:
-    def __init__(self, num_encoder_tokens, num_decoder_tokens, start_token, end_token, latent_dim=256):
+    def __init__(self, num_encoder_tokens, num_decoder_tokens, start_token, end_token, latent_dim=256, projection='one_hot', emb_dim=64):
         self.num_encoder_tokens = num_encoder_tokens
         self.num_decoder_tokens = num_decoder_tokens
 
@@ -17,12 +17,22 @@ class Seq2Seq:
 
         # Define an input sequence and process it.
         encoder_inputs = Input(shape=(None,))
-        encoder_emb = Embedding(
-            num_encoder_tokens+1,
-            num_encoder_tokens,
-            weights=[np.concatenate((np.zeros(shape=(1, num_encoder_tokens)), np.identity(num_encoder_tokens)))],
-            trainable=False
-        )(encoder_inputs)
+        if projection == 'one_hot':
+            embedding = Embedding(
+                num_encoder_tokens+1,
+                num_encoder_tokens,
+                weights=[np.concatenate((np.zeros(shape=(1, num_encoder_tokens)), np.identity(num_encoder_tokens)))],
+                trainable=False
+            )
+        elif projection == 'word2vec':
+            embedding = Embedding(
+                num_encoder_tokens + 1,
+                emb_dim,
+                mask_zero=True
+            )
+        else:
+             raise Exception("projection method not recognized")
+        encoder_emb = embedding(encoder_inputs)
         encoder = LSTM(latent_dim, return_state=True)
         encoder_outputs, state_h, state_c = encoder(encoder_emb)
         # We discard `encoder_outputs` and only keep the states.
@@ -30,12 +40,22 @@ class Seq2Seq:
 
         # Set up the decoder, using `encoder_states` as initial state.
         decoder_inputs = Input(shape=(None,))
-        decoder_emb = Embedding(
-            num_decoder_tokens+1,
-            num_decoder_tokens,
-            weights=[np.concatenate((np.zeros(shape=(1, num_decoder_tokens)), np.identity(num_decoder_tokens)))],
-            trainable=False
-        )(decoder_inputs)
+        if projection == 'one_hot':
+            embedding = Embedding(
+                num_decoder_tokens+1,
+                num_decoder_tokens,
+                weights=[np.concatenate((np.zeros(shape=(1, num_decoder_tokens)), np.identity(num_decoder_tokens)))],
+                trainable=False
+            )
+        elif projection == 'word2vec':
+            embedding = Embedding(
+                num_decoder_tokens+1,
+                emb_dim,
+                mask_zero=True
+            )
+        else:
+            raise Exception("projection method not recognized")
+        decoder_emb = embedding(decoder_inputs)
         # We set up our decoder to return full output sequences,
         # and to return internal states as well. We don't use the
         # return states in the training model, but we will use them in inference.
@@ -80,10 +100,10 @@ class Seq2Seq:
         self.max_encoder_seq_length = max([len(seq) for seq in encoder_input_seqs])
         self.max_decoder_seq_length = max([len(seq) for seq in decoder_input_seqs])
         encoder_input_data = self.pre_process_encoder_input(encoder_input_seqs)
-        decoder_input_data = self.pre_process_decoder_input(decoder_input_seqs)
-        decoder_target_data = self.pre_process_decoder_target(decoder_target_seqs)
         print('encoder_input_data.shape: ', encoder_input_data.shape)
+        decoder_input_data = self.pre_process_decoder_input(decoder_input_seqs)
         print('decoder_input_data.shape: ', decoder_input_data.shape)
+        decoder_target_data = self.pre_process_decoder_target(decoder_target_seqs)
         print('decoder_target_data.shape: ', decoder_target_data.shape)
         self.train_model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
         self.train_model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
