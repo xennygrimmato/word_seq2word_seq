@@ -64,7 +64,7 @@ class Dataset:
         if self.character_level:
             return text
         else:
-            return text.split(' ')
+            return [t for t in text.split(' ') if t != '']
 
     def join_tokens(self, tokens):
         if self.character_level:
