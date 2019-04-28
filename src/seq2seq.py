@@ -16,44 +16,48 @@ class Seq2Seq:
         self.end_token = end_token
 
         # Define an input sequence and process it.
-        encoder_inputs = Input(shape=(None,))
+        encoder_inputs = Input(shape=(None,), name='encoder_input')
         if projection == 'one_hot':
             embedding = Embedding(
                 num_encoder_tokens+1,
                 num_encoder_tokens,
                 weights=[np.concatenate((np.zeros(shape=(1, num_encoder_tokens)), np.identity(num_encoder_tokens)))],
                 trainable=False,
-                mask_zero=True
+                mask_zero=True,
+                name='encoder_embedding'
             )
         elif projection == 'word2vec':
             embedding = Embedding(
                 num_encoder_tokens + 1,
                 emb_dim,
-                mask_zero=True
+                mask_zero=True,
+                name='encoder_embedding'
             )
         else:
              raise Exception("projection method not recognized")
         encoder_emb = embedding(encoder_inputs)
-        encoder = LSTM(latent_dim, return_state=True)
+        encoder = LSTM(latent_dim, return_state=True, name='encoder_lstm')
         encoder_outputs, state_h, state_c = encoder(encoder_emb)
         # We discard `encoder_outputs` and only keep the states.
         encoder_states = [state_h, state_c]
 
         # Set up the decoder, using `encoder_states` as initial state.
-        decoder_inputs = Input(shape=(None,))
+        decoder_inputs = Input(shape=(None,), name='decoder_input')
         if projection == 'one_hot':
             embedding = Embedding(
                 num_decoder_tokens+1,
                 num_decoder_tokens,
                 weights=[np.concatenate((np.zeros(shape=(1, num_decoder_tokens)), np.identity(num_decoder_tokens)))],
                 trainable=False,
-                mask_zero=True
+                mask_zero=True,
+                name='decoder_embedding'
             )
         elif projection == 'word2vec':
             embedding = Embedding(
                 num_decoder_tokens+1,
                 emb_dim,
-                mask_zero=True
+                mask_zero=True,
+                name='decoder_embedding'
             )
         else:
             raise Exception("projection method not recognized")
@@ -61,10 +65,10 @@ class Seq2Seq:
         # We set up our decoder to return full output sequences,
         # and to return internal states as well. We don't use the
         # return states in the training model, but we will use them in inference.
-        decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True)
+        decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True, name='decoder_lstm')
         decoder_outputs, _, _ = decoder_lstm(decoder_emb,
                                              initial_state=encoder_states)
-        decoder_dense = Dense(self.num_decoder_tokens, activation='softmax')
+        decoder_dense = Dense(self.num_decoder_tokens, activation='softmax', name='decoder_softmax')
         decoder_outputs = decoder_dense(decoder_outputs)
 
         # Define the model that will turn
@@ -74,8 +78,8 @@ class Seq2Seq:
         # Define sampling models
         self.encoder_model = Model(encoder_inputs, encoder_states)
 
-        decoder_state_input_h = Input(shape=(latent_dim,))
-        decoder_state_input_c = Input(shape=(latent_dim,))
+        decoder_state_input_h = Input(shape=(latent_dim,), name='decoder_state_input_h')
+        decoder_state_input_c = Input(shape=(latent_dim,), name='decoder_state_input_c')
         decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
         decoder_outputs, state_h, state_c = decoder_lstm(
             decoder_emb, initial_state=decoder_states_inputs)
