@@ -1,19 +1,28 @@
 from __future__ import print_function
 
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.layers import Input, LSTM, Dense, Embedding
 import numpy as np
+
 
 from src.utils import one_hot_encode, add_one
 
 
 class Seq2Seq:
-    def __init__(self, num_encoder_tokens, num_decoder_tokens, start_token, end_token, latent_dim=256, projection='one_hot', emb_dim=64):
+    def __init__(self, num_encoder_tokens, num_decoder_tokens, start_token, end_token,
+                 latent_dim=256, projection='one_hot', emb_dim=64,
+                 restore_path=None):
         self.num_encoder_tokens = num_encoder_tokens
         self.num_decoder_tokens = num_decoder_tokens
 
         self.start_token = start_token
         self.end_token = end_token
+
+        if restore_path:
+            self.train_model = load_model(restore_path + '/train_model.s2s.h5')
+            self.encoder_model = load_model(restore_path + '/encoder_model.s2s.h5')
+            self.decoder_model = load_model(restore_path + '/decoder_model.s2s.h5')
+            return
 
         # Define an input sequence and process it.
         encoder_inputs = Input(shape=(None,), name='encoder_input')
