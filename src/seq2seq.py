@@ -1,11 +1,11 @@
 from __future__ import print_function
 
-from keras.models import Model, load_model
-from keras.layers import Input, LSTM, Dense, Embedding
+from tensorflow.python.keras.models import Model, load_model
+from tensorflow.python.keras.layers import Input, LSTM, Dense, Embedding
 import numpy as np
 
 
-from src.utils import one_hot_encode, add_one
+from src.utils import one_hot_encode, add_n
 
 
 class Seq2Seq:
@@ -100,15 +100,15 @@ class Seq2Seq:
 
     def pre_process_encoder_input(self, input):
         # return one_hot_encode(input, self.max_encoder_seq_length, self.num_encoder_tokens)
-        return add_one(input, self.max_encoder_seq_length)
+        return add_n(input, self.max_encoder_seq_length, 1)
 
     def pre_process_decoder_input(self, input):
         # return one_hot_encode(input, self.max_decoder_seq_length, self.num_decoder_tokens)
-        return add_one(input, self.max_decoder_seq_length)
+        return add_n(input, self.max_decoder_seq_length, 1)
 
     def pre_process_decoder_target(self, input):
-        return one_hot_encode(input, self.max_decoder_seq_length, self.num_decoder_tokens)
-        # return add_one(input, self.max_decoder_seq_length)
+        # return one_hot_encode(input, self.max_decoder_seq_length, self.num_decoder_tokens)
+        return add_n(input, self.max_decoder_seq_length, 0)
 
     def train(self, encoder_input_seqs, decoder_input_seqs, decoder_target_seqs, batch_size=64, epochs=100):
         # Run training
@@ -120,7 +120,7 @@ class Seq2Seq:
         print('decoder_input_data.shape: ', decoder_input_data.shape)
         decoder_target_data = self.pre_process_decoder_target(decoder_target_seqs)
         print('decoder_target_data.shape: ', decoder_target_data.shape)
-        self.train_model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
+        self.train_model.compile(optimizer='rmsprop', loss='sparse_categorical_crossentropy')
         self.train_model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
                   batch_size=batch_size,
                   epochs=epochs,
