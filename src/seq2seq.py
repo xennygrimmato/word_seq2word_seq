@@ -1,7 +1,9 @@
 from __future__ import print_function
 
 from keras.models import Model, load_model
-from keras.layers import Input, LSTM, Dense, Embedding
+from keras.layers import Input, LSTM, Dense, Embedding, Activation, Lambda, Multiply, Add, Permute
+from keras import backend as K
+import keras
 import numpy as np
 
 
@@ -10,7 +12,7 @@ from src.utils import one_hot_encode, add_one
 
 class Seq2Seq:
     def __init__(self, num_encoder_tokens, num_decoder_tokens, start_token, end_token,
-                 latent_dim=256, projection='one_hot', emb_dim=64,
+                 latent_dim=256, projection='one_hot', emb_dim=64, attention=None,
                  restore_path=None):
         self.num_encoder_tokens = num_encoder_tokens
         self.num_decoder_tokens = num_decoder_tokens
@@ -45,7 +47,10 @@ class Seq2Seq:
         else:
              raise Exception("projection method not recognized")
         encoder_emb = embedding(encoder_inputs)
-        encoder = LSTM(latent_dim, return_state=True, name='encoder_lstm')
+        if attention:
+            encoder = LSTM(latent_dim, return_state=True, return_sequences=True, name='encoder_lstm')
+        else:
+            encoder = LSTM(latent_dim, return_state=True, name='encoder_lstm')
         encoder_outputs, state_h, state_c = encoder(encoder_emb)
         # We discard `encoder_outputs` and only keep the states.
         encoder_states = [state_h, state_c]
@@ -77,7 +82,26 @@ class Seq2Seq:
         decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True, name='decoder_lstm')
         decoder_outputs, _, _ = decoder_lstm(decoder_emb,
                                              initial_state=encoder_states)
-        decoder_dense = Dense(self.num_decoder_tokens, activation='softmax', name='decoder_softmax')
+
+        if attention:
+            if attention == 'bahdanau':
+                w1 = Dense(latent_dim, name='w1')
+                w2 = Dense(latent_dim, name='w2')
+                v = Dense(1, name='v')
+                scores = v(
+                    Activation('tanh', name='tanh')(
+                        Add(name='add_encoder_decoder_projection')(
+                            [w1(encoder_outputs),
+                             Permute((2, 1))(w2(decoder_outputs))])))
+                attention_weights = Activation('softmax', name='softmax_scores')(scores)
+                context_vector = Multiply(name='multiply_weights_encoder_outputs')([attention_weights, encoder_outputs])
+                context_vector = Lambda(lambda x: K.sum(x, axis=1), name='reduce_sum_context_vector')(context_vector)
+                decoder_outputs = Add(name='add_decoder_outputs_context_vector')([decoder_outputs, context_vector])
+            else:
+                raise Exception('unsupported attention: ' + attention)
+
+        # decoder_dense = Dense(self.num_decoder_tokens, activation=keras.activations.softmax, name='decoder_softmax')
+        decoder_dense = Dense(self.num_decoder_tokens, activation=keras.activations.softmax, name='decoder_softmax')
         decoder_outputs = decoder_dense(decoder_outputs)
 
         # Define the model that will turn
